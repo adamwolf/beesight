@@ -1,10 +1,9 @@
-import ConfigParser
+import configparser
 import datetime
 import urllib
-import urllib2
 import requests
 import sys
-import simplejson
+import json
 import time
 
 # complain on config file issues
@@ -21,10 +20,10 @@ INSIGHT_CSV_URL = "https://insighttimer.com/users/export"
 BASE_URL= "https://www.beeminder.com/api/v1/"
 GET_DATAPOINTS_URL = BASE_URL + "users/%s/goals/%s/datapoints.json?auth_token=%s"
 POST_MANY_DATAPOINTS_URL = BASE_URL + "users/%s/goals/%s/datapoints/create_all.json?auth_token=%s"
-POST_DATAPOINTS_URL = GET_DATAPOINTS_URL + "&timestamp=%s&value=%s"
+POST_DATAPOINTS_URL = GET_DATAPOINTS_URL + "&timestamp=%s&value=%s&comment=%s"
 
 def get_insight_data():
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config.read(CONFIG_FILE_NAME)
 
     username = config.get(INSIGHT_SECTION, "username")
@@ -32,7 +31,7 @@ def get_insight_data():
 
     values = {'user_session[email]' : username,
               'user_session[password]' : password }
-    login_data = urllib.urlencode(values)
+    login_data = urllib.parse.urlencode(values)
 
     # Start a session so we can have persistent cookies
     session = requests.session()
@@ -41,7 +40,7 @@ def get_insight_data():
     return r.text.split('\n')
 
 def post_beeminder_entry(entry):
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read(CONFIG_FILE_NAME)
 
         username = config.get(BEEMINDER_SECTION, "username")
@@ -49,13 +48,13 @@ def post_beeminder_entry(entry):
         goal_name = config.get(BEEMINDER_SECTION, "goal_name")
 
         session = requests.session()
-        full_url = POST_DATAPOINTS_URL % (username, goal_name, auth_token, entry["timestamp"], entry["value"])
+        full_url = POST_DATAPOINTS_URL % (username, goal_name, auth_token, entry["timestamp"], entry["value"], entry["comment"])
         r = session.post(full_url)
 
-        print "Posted entry: %s" % r.text
+        print ("Posted entry: ", r.text)
 
 def get_beeminder():
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config.read(CONFIG_FILE_NAME)
 
         username = config.get(BEEMINDER_SECTION, "username")
@@ -67,7 +66,7 @@ def get_beeminder():
         return the_page
 
 def beeminder_to_one_per_day(beeminder_output):
-    bm = simplejson.loads(beeminder_output)
+    bm = json.loads(beeminder_output)
 
     s = {}
 
@@ -85,43 +84,49 @@ def beeminder_to_one_per_day(beeminder_output):
 
     return s.keys()
 
-def csv_to_one_per_day(csv_lines):
-    s = {}
+def csv_to_todays_minutes(csv_lines):
+    minutes = int(0)
 
     # skip first two header lines
-    for l in csv_lines[2:]:
-        datetime_part = l.split(",")[0]
+    for l in csv_lines[2:6]:
+        line = l.split(",")
+        print (line[0])
+        datetime_part = line[0]
+        minutes_entry = line[1]
         date_part = datetime_part.split(" ")[0]
         date_parts = date_part.split("/")
         if len(date_parts) == 3:
             m, d, y = map(int, date_parts)
             dt = datetime.date(y, m, d)
 
-            if not dt in s:
-                s[dt] = 0
+            if dt == datetime.date.today():
+                minutes += int(minutes_entry)
 
-    return s.keys()
-
+    return minutes	
+	
 def date_to_jp_timestamp(dt):
     d = datetime.datetime.combine(dt, datetime.time())
     return int(time.mktime(d.timetuple()))
 
 if __name__ == "__main__":
-    # get dates of days meditated, from insight
-    insight_dates = csv_to_one_per_day(get_insight_data())
-    print "%s days meditated according to insighttimer.com" % len(insight_dates)
+    # get today's minutes from insight
+    insight_minutes = csv_to_todays_minutes(get_insight_data())
+    if insight_minutes == 0:
+        print ("No minutes logged for today's date on InsightTimer.com")
+        sys.exit()
+    else:
+        print (insight_minutes, " minutes meditated today according to InsightTimer.com")
 
     # get dates of days meditated, from beeminder
-    beeminder_dates = beeminder_to_one_per_day(get_beeminder())
-    print "%s datapoints in beeminder" % len(beeminder_dates)
+    #beeminder_dates = beeminder_to_one_per_day(get_beeminder())
+    #print "%s datapoints in beeminder" % len(beeminder_dates)
 
-    # get dates which beeminder doesn't know about yet
-    new_dates = sorted(list(set(insight_dates) - set(beeminder_dates)))
+    # get today's date
+    new_date = datetime.date.today()
 
     # create beeminder-friendly datapoints
-    new_datapoints = [{'timestamp': date_to_jp_timestamp(d), 'value':1.0, "comment":"test"} for d in new_dates]
+    new_datapoint = {'timestamp': date_to_jp_timestamp(new_date), 'value':insight_minutes, 'comment':"beesight+script+entry"}
 
-    print "%s datapoints to post" % len(new_datapoints)
+    print (insight_minutes, " minutes to post")
 
-    for dp in new_datapoints:
-        post_beeminder_entry(dp)
+    post_beeminder_entry(new_datapoint)
