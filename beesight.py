@@ -6,6 +6,21 @@ import sys
 import json
 import time
 
+#add logging module
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
+#create a log file handler
+handler = logging.FileHandler('beesight.log')
+handler.setLevel(logging.DEBUG)
+#logging format
+formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+handler.setFormatter(formatter)
+#add handler to the logger
+logger.addHandler(handler)
+
 # complain on config file issues
 # complain on bad login
 # don't hardcode timezone to japan
@@ -24,6 +39,7 @@ POST_DATAPOINTS_URL = GET_DATAPOINTS_URL + "&timestamp=%s&value=%s&comment=%s"
 
 def get_insight_data():
     config = configparser.RawConfigParser()
+    logger.debug ("Reading config file %s", CONFIG_FILE_NAME)
     config.read(CONFIG_FILE_NAME)
 
     username = config.get(INSIGHT_SECTION, "username")
@@ -35,7 +51,9 @@ def get_insight_data():
 
     # Start a session so we can have persistent cookies
     session = requests.session()
+    logger.debug("Submitting POST request to insighttimer.com...")
     r = session.post(LOGIN_URL, data=login_data)
+    logger.debug("Submitting GET request to insighttimer.com...")
     r = session.get(INSIGHT_CSV_URL)
     return r.text.split('\n')
 
@@ -49,9 +67,11 @@ def post_beeminder_entry(entry):
 
         session = requests.session()
         full_url = POST_DATAPOINTS_URL % (username, goal_name, auth_token, entry["timestamp"], entry["value"], entry["comment"])
+        logger.debug("Ready to post new datapoints string to beeminder.com. Encoded URL follows:")
+        logger.debug(full_url)
         r = session.post(full_url)
 
-        print ("Posted entry: ", r.text)
+        logger.info ("Posted entry: %s", r.text)
 
 def get_beeminder():
         config = configparser.RawConfigParser()
@@ -88,11 +108,12 @@ def csv_to_todays_minutes(csv_lines):
     minutes = int(0)
 
     # skip first two header lines
+    logger.info("Parsing last four sessions from CSV:")
     for l in csv_lines[2:6]:
         line = l.split(",")
-        print (line[0])
         datetime_part = line[0]
         minutes_entry = line[1]
+        logger.info ("%s : %s minutes", datetime_part, minutes_entry)
         date_part = datetime_part.split(" ")[0]
         date_parts = date_part.split("/")
         if len(date_parts) == 3:
@@ -112,10 +133,10 @@ if __name__ == "__main__":
     # get today's minutes from insight
     insight_minutes = csv_to_todays_minutes(get_insight_data())
     if insight_minutes == 0:
-        print ("No minutes logged for today's date on InsightTimer.com")
+        logger.info("No minutes logged for today's date on InsightTimer.com")
         sys.exit()
     else:
-        print (insight_minutes, " minutes meditated today according to InsightTimer.com")
+        logger.info ("%s minutes meditated today according to InsightTimer.com", insight_minutes)
 
     # get dates of days meditated, from beeminder
     #beeminder_dates = beeminder_to_one_per_day(get_beeminder())
@@ -123,10 +144,11 @@ if __name__ == "__main__":
 
     # get today's date
     new_date = datetime.date.today()
+    logger.debug ("new_date: %s", new_date)
 
     # create beeminder-friendly datapoints
     new_datapoint = {'timestamp': date_to_jp_timestamp(new_date), 'value':insight_minutes, 'comment':"beesight+script+entry"}
-
-    print (insight_minutes, " minutes to post")
+    logger.debug ("new_datapoint: %s", new_datapoint)
 
     post_beeminder_entry(new_datapoint)
+    logger.info ("Script complete, exiting.")

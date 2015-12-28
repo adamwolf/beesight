@@ -9,14 +9,17 @@ It is intended to be run every evening as a scheduled task, picking up new datap
 Prerequisites
 --------------
 Python version 3.5 or later
-Use pip35.exe to download the "requests" package (pip35.exe install requests)
-
+Use pip35.exe to download the "requests" package 
+```
+pip35.exe install requests)
+```
 Usage
 ---------
 
 Rename default_config.ini to config.ini and fill in your insighttimer.com and beeminder credentials.
 
 Your beeminder auth token can be found at this URL when logged in:
+
 https://www.beeminder.com/api/v1/auth_token.json
 
 To run:
