@@ -30,7 +30,7 @@ INSIGHT_SECTION = 'insight'
 BEEMINDER_SECTION = 'beeminder'
 
 LOGIN_URL = "https://insighttimer.com/user_session"
-INSIGHT_CSV_URL = "https://insighttimer.com/users/export"
+INSIGHT_CSV_URL = "https://insighttimer.com/sessions/export"
 
 BASE_URL= "https://www.beeminder.com/api/v1/"
 GET_DATAPOINTS_URL = BASE_URL + "users/%s/goals/%s/datapoints.json?auth_token=%s"
