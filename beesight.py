@@ -37,6 +37,8 @@ GET_DATAPOINTS_URL = BASE_URL + "users/%s/goals/%s/datapoints.json?auth_token=%s
 POST_MANY_DATAPOINTS_URL = BASE_URL + "users/%s/goals/%s/datapoints/create_all.json?auth_token=%s"
 POST_DATAPOINTS_URL = GET_DATAPOINTS_URL + "&timestamp=%s&value=%s&comment=%s"
 
+EASTERN_UTC_OFFSET=-5
+
 def get_insight_data():
     config = configparser.RawConfigParser()
     logger.debug ("Reading config file %s", CONFIG_FILE_NAME)
@@ -108,26 +110,31 @@ def csv_to_todays_minutes(csv_lines):
     minutes = int(0)
 
     # skip first two header lines
+    config = configparser.RawConfigParser()
+    logger.debug ("Reading config file %s", CONFIG_FILE_NAME)
+    config.read(CONFIG_FILE_NAME)
+    timezone_offset = int(config.get(INSIGHT_SECTION, "utc_timezone"))
+
     logger.info("Parsing last four sessions from CSV:")
     for l in csv_lines[2:6]:
         line = l.split(",")
         datetime_part = line[0]
         minutes_entry = line[1]
         logger.info ("%s : %s minutes", datetime_part, minutes_entry)
-        date_part = datetime_part.split(" ")[0]
+        date_part, time_part = datetime_part.split(" ")
         date_parts = date_part.split("/")
-        if len(date_parts) == 3:
+        time_parts = time_part.split(":")
+        if len(date_parts) == 3 and len(time_parts) == 3:
             m, d, y = map(int, date_parts)
+            h, _, _ = map(int, time_parts)
+            if h - EASTERN_UTC_OFFSET + timezone_offset < 0:
+                d -= 1
             dt = datetime.date(y, m, d)
-
+            logger.info(dt)
             if dt == datetime.date.today():
                 minutes += int(minutes_entry)
 
-    return minutes	
-	
-def date_to_jp_timestamp(dt):
-    d = datetime.datetime.combine(dt, datetime.time())
-    return int(time.mktime(d.timetuple()))
+    return minutes
 
 if __name__ == "__main__":
     # get today's minutes from insight
@@ -147,7 +154,8 @@ if __name__ == "__main__":
     logger.debug ("new_date: %s", new_date)
 
     # create beeminder-friendly datapoints
-    new_datapoint = {'timestamp': date_to_jp_timestamp(new_date), 'value':insight_minutes, 'comment':"beesight+script+entry"}
+    timestamp = datetime.datetime.today().timestamp()
+    new_datapoint = {'timestamp': timestamp, 'value':insight_minutes, 'comment':"beesight+script+entry"}
     logger.debug ("new_datapoint: %s", new_datapoint)
 
     post_beeminder_entry(new_datapoint)
