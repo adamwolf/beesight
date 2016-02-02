@@ -37,8 +37,6 @@ GET_DATAPOINTS_URL = BASE_URL + "users/%s/goals/%s/datapoints.json?auth_token=%s
 POST_MANY_DATAPOINTS_URL = BASE_URL + "users/%s/goals/%s/datapoints/create_all.json?auth_token=%s"
 POST_DATAPOINTS_URL = GET_DATAPOINTS_URL + "&timestamp=%s&value=%s&comment=%s"
 
-EASTERN_UTC_OFFSET=-5
-
 def get_insight_data():
     config = configparser.RawConfigParser()
     logger.debug ("Reading config file %s", CONFIG_FILE_NAME)
@@ -116,24 +114,29 @@ def csv_to_todays_minutes(csv_lines):
     timezone_offset = int(config.get(INSIGHT_SECTION, "utc_timezone"))
 
     logger.info("Parsing last four sessions from CSV:")
-    for l in csv_lines[2:6]:
-        line = l.split(",")
-        datetime_part = line[0]
-        minutes_entry = line[1]
-        logger.info ("%s : %s minutes", datetime_part, minutes_entry)
-        date_part, time_part = datetime_part.split(" ")
-        date_parts = date_part.split("/")
-        time_parts = time_part.split(":")
-        if len(date_parts) == 3 and len(time_parts) == 3:
-            m, d, y = map(int, date_parts)
-            h, _, _ = map(int, time_parts)
-            if h - EASTERN_UTC_OFFSET + timezone_offset < 0:
-                d -= 1
-            dt = datetime.date(y, m, d)
-            logger.info(dt)
-            if dt == datetime.date.today():
-                minutes += int(minutes_entry)
-
+    # try to read the last four entries
+    try:
+        for l in csv_lines[2:6]:
+            line = l.split(",")
+            datetime_part = line[0]
+            minutes_entry = line[1]
+            logger.info ("%s : %s minutes", datetime_part, minutes_entry)
+            date_part, time_part = datetime_part.split(" ")
+            date_parts = date_part.split("/")
+            time_parts = time_part.split(":")
+            if len(date_parts) == 3 and len(time_parts) == 3:
+                m, d, y = map(int, date_parts)
+                h, _, _ = map(int, time_parts)
+                dt = datetime.date(y, m, d)
+                if h + timezone_offset < 0:
+                    dt -= datetime.timedelta(days=1)
+                logger.info(dt)
+                if dt == datetime.date.today():
+                    minutes += int(minutes_entry)
+    except IndexError:
+        logger.info ("Insight session data too short: expected at least 4 entries, retrieved %s minutes from available data", minutes)
+    else:
+        logger.info ("File parsed successfully, %s minutes retrieved.", minutes)
     return minutes
 
 if __name__ == "__main__":
