@@ -1,18 +1,27 @@
-beesight.py - minutes fork by bluremi
+beesight.py 
 -------------
-This is a small script which retrieves meditation data from insighttimer.com and posts the data points to your beeminder goal, so that you can easily track how often you're meditating.
 
-The original script by Dave Cahill (https://github.com/davecahill/beesight) just recorded whether a day was a hit or a miss. This version records how many minutes in total you've meditated today. It supports multiple sessions in one day.
+This is a work-in-progress to make this suitable for Glitch.
+
+The first milestone is for it to have your total minutes of meditation per day posted.  It won't be smart about duplicates or anything, so make sure to set your aggday to something like "last".
+
+It would be better if it was smarter!
+ 
+History
+-------
+Originally by Dave Cahill (https://github.com/davecahill/beesight) 
+Updated by bluremi (https://github.com/benkloester/beesight)
+Modified by Adam Wolf 
+
+This is a small script which retrieves meditation data from insighttimer.com and posts the data points to your beeminder goal, so that you can easily track how often you're meditating.
 
 It is intended to be run every evening as a scheduled task, picking up new datapoints and posting them to beeminder.
 
 Prerequisites
 --------------
 Python version 3.5 or later
-Use pip35.exe to download the "requests" package, e.g. from the command prompt run:
-```
-pip35.exe install requests
-```
+requests
+
 Usage
 ---------
 
@@ -40,10 +49,11 @@ If you run the script more than once it will post duplicate entries.
 
 Change Log
 ------
+
 2018-08-18: Updated to be compatible with changed Insight Timer log format that uses hh:mm:ss instead of just minutes in the duration part.
 2016-02-02: Merged Josh Curtis fork. Bug fixes:
             - Timezone correction now works on the 1st of the month
-			- Script will now gracefully handle data where there are fewer than 4 sessions recorded.
+			      - Script will now gracefully handle data where there are fewer than 4 sessions recorded.
 2016-01-28: Timezone correction added by Josh Curtis in new fork.
 2016-01-13: Updated insighttimer.com session URL (script was broken by server-side changes)
 2015-12-28: Added logging output
