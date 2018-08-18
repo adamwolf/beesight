@@ -34,10 +34,13 @@ Notes
 ------
 This script will only retrieve today's minutes. If you want to post yesterday's minutes that is currently unsupported.
 
+It also only posts minutes for log entries containing the word "Meditation". 
+
 If you run the script more than once it will post duplicate entries.
 
 Change Log
 ------
+2018-08-18: Updated to be compatible with changed Insight Timer log format that uses hh:mm:ss instead of just minutes in the duration part.
 2016-02-02: Merged Josh Curtis fork. Bug fixes:
             - Timezone correction now works on the 1st of the month
 			- Script will now gracefully handle data where there are fewer than 4 sessions recorded.
