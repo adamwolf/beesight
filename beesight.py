@@ -119,7 +119,12 @@ def csv_to_todays_minutes(csv_lines):
         for l in csv_lines[2:6]:
             line = l.split(",")
             datetime_part = line[0]
-            minutes_entry = line[1]
+            duration_part = line[1]
+            activity_part = line[2]
+            if "Meditation" not in activity_part:
+                continue 
+            d_h, d_m, d_s= duration_part.split(":")
+            minutes_entry = 60 * int(d_h) + int(d_m) + (1 if int(d_s) >= 30 else 0)
             logger.info ("%s : %s minutes", datetime_part, minutes_entry)
             date_part, time_part = datetime_part.split(" ")
             date_parts = date_part.split("/")
