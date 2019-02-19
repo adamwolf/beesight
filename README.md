@@ -15,7 +15,12 @@ It would be better if it was smarter!
 * Maybe, if it's fun, think about how to handle meditation over the deadline/midnight.
 * Maybe, if it's fun, turn process_insight_data into a generator of some sort
  
+I need to verify and test timezone things with this.
+
+
 I keep forgetting how to setup integration with Beeminder.  Go to https://www.beeminder.com/settings/account#account-permissions, and register a new app.  Set the Autofetch Callback URL to the update URL here.  When Beeminder wants to grab a datapoint, or when you hit Refresh on a goal, Beeminder will POST to that Autofetch Callback URL.  It posts the goal name and the username, and some other things I think.  See the API docs for details.  Then, do something like `curl -X PUT https://www.beeminder.com/api/v1/users/your_username/goals/goalname -d auth_token=xxxxxx -d datasource=your_api_name` 
+
+
 History
 -------
 Originally by Dave Cahill (https://github.com/davecahill/beesight) 
